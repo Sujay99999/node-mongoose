@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const multer = require("multer");
 
 const UserModel = require("../models/UserModel");
+const BlogModel = require("../models/BlogModel");
 const AppError = require("../utils/AppError");
 
 //this is the function that verifies the user password and passes onto the next middleware
@@ -111,7 +112,10 @@ exports.getUserDetails = async (req, res, next) => {
     const { userId } = req.params;
     console.log("the user id is ", userId);
 
-    const currentUser = await UserModel.findById(userId);
+    const currentUser = await UserModel.findById(userId).populate({
+      path: "blogs",
+      select: "title description tags createdAt",
+    });
     console.log(currentUser);
 
     if (!currentUser) {
@@ -134,10 +138,16 @@ exports.deleteUser = async (req, res, next) => {
   try {
     // the customer is saved on the req object
 
+    // need to delete all the blogs with the respective email address
+    await BlogModel.deleteMany({
+      email: req.currentUser.email,
+    });
+
     const deletedCustomer = await UserModel.findOneAndDelete({
       email: req.currentUser.email,
     });
-    res.status(200).json({
+
+    res.status(204).json({
       status: "success",
       data: {
         deletedCustomer,
